@@ -1,14 +1,23 @@
-# Use Java image
-FROM eclipse-temurin:21-jdk
+# ---------- Stage 1: Build the application ----------
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
 
-# Set working directory
+WORKDIR /build
+
+COPY pom.xml .
+RUN mvn -B -q -e -DskipTests dependency:go-offline
+
+COPY src ./src
+
+RUN mvn -B -DskipTests clean package
+
+
+# ---------- Stage 2: Run the application ----------
+FROM eclipse-temurin:17-jdk
+
 WORKDIR /app
 
-# Copy project
-COPY . .
+COPY --from=builder /build/target/*.jar app.jar
 
-# Build the project
-RUN ./mvnw clean package -DskipTests
+EXPOSE 8080
 
-# Run the jar
-CMD ["java","-jar","target/SecureFintechBank-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]
